@@ -17,6 +17,13 @@ import Testing
         #expect(store.anchorDisplayUUID == nil)
         #expect(store.anchorDisplayName == nil)
         #expect(store.bypassModifier == .fn)
+        #expect(store.followDock == true)
+    }
+
+    @Test func followDockPersists() {
+        let store = freshStore()
+        store.followDock = false
+        #expect(store.followDock == false)
     }
 
     @Test func persistsValues() {

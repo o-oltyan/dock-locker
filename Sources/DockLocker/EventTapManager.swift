@@ -13,6 +13,10 @@ final class EventTapManager {
     /// Holding these flags bypasses clamping so the Dock can be moved normally.
     var bypassFlags: CGEventFlags = ModifierKey.default.flags
 
+    /// Fired (async, on main) when the bypass key is released — the moment a
+    /// deliberate Dock move may just have finished.
+    var onBypassReleased: (() -> Void)?
+
     /// Some keyboards deliver Fn only on flagsChanged, not on mouse events —
     /// the bypass check unions the mouse event's flags with this cache.
     private var lastKnownFlags: CGEventFlags = []
@@ -82,7 +86,12 @@ final class EventTapManager {
             }
             return Unmanaged.passUnretained(event)
         case .flagsChanged:
+            let previous = lastKnownFlags
             lastKnownFlags = event.flags
+            if previous.contains(bypassFlags), !event.flags.contains(bypassFlags) {
+                let callback = onBypassReleased
+                DispatchQueue.main.async { callback?() }
+            }
             return Unmanaged.passUnretained(event)
         default:
             if event.flags.union(lastKnownFlags).contains(bypassFlags) {

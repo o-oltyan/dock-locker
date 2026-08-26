@@ -7,6 +7,7 @@ public final class SettingsStore {
         static let anchorDisplayUUID = "anchorDisplayUUID"
         static let anchorDisplayName = "anchorDisplayName"
         static let bypassModifier = "bypassModifier"
+        static let followDock = "followDock"
     }
 
     private let defaults: UserDefaults
@@ -28,6 +29,14 @@ public final class SettingsStore {
     public var anchorDisplayName: String? {
         get { defaults.string(forKey: Key.anchorDisplayName) }
         set { defaults.set(newValue, forKey: Key.anchorDisplayName) }
+    }
+
+    /// When true, the protected display is wherever the Dock currently lives
+    /// (re-detected after each bypass move); when false, it's the fixed
+    /// display picked via anchorDisplayUUID/Name.
+    public var followDock: Bool {
+        get { defaults.object(forKey: Key.followDock) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: Key.followDock) }
     }
 
     public var bypassModifier: ModifierKey {

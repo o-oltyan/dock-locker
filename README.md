@@ -11,7 +11,11 @@ triggers Dock migration. Hold the bypass key (default: **Fn/Globe**) and the
 Dock behaves normally, so you can still move it deliberately.
 
 - Menu-bar only — no Dock icon, runs in the background (`LSUIElement`)
-- Pick the anchor display and the bypass key from the menu
+- **Follow the Dock** (default): the lock protects whichever display the Dock
+  is currently on — move it deliberately with the bypass key and the lock
+  follows it there. Or pin it to a **fixed display** instead, where the chosen
+  display's own bottom edge always summons the Dock back.
+- Pick the mode, display, and bypass key from the menu
 - Optional **Start at Login** (`SMAppService`)
 - Displays are remembered by hardware UUID, so the choice survives
   unplug/replug; if the chosen display is missing, DockLocker falls back to the

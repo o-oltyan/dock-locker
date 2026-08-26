@@ -13,6 +13,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     private let loginItems: LoginItemManager
     private let authorizer: AccessibilityAuthorizer
     private let permissionState: () -> PermissionState
+    private let dockHostDisplayID: () -> UInt32?
     private let onSettingsChanged: () -> Void
 
     init(
@@ -21,6 +22,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         loginItems: LoginItemManager,
         authorizer: AccessibilityAuthorizer,
         permissionState: @escaping () -> PermissionState,
+        dockHostDisplayID: @escaping () -> UInt32?,
         onSettingsChanged: @escaping () -> Void
     ) {
         self.settings = settings
@@ -28,6 +30,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         self.loginItems = loginItems
         self.authorizer = authorizer
         self.permissionState = permissionState
+        self.dockHostDisplayID = dockHostDisplayID
         self.onSettingsChanged = onSettingsChanged
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
@@ -115,11 +118,22 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         item.isEnabled = true
         let submenu = NSMenu()
         submenu.autoenablesItems = false
+
+        let follow = NSMenuItem(
+            title: "Follow the Dock",
+            action: #selector(selectFollowDock),
+            keyEquivalent: "")
+        follow.target = self
+        follow.state = settings.followDock ? .on : .off
+        submenu.addItem(follow)
+        submenu.addItem(.separator())
+
+        let hostID = dockHostDisplayID()
         let anchor = screenManager.resolveAnchor(
             uuid: settings.anchorDisplayUUID,
             name: settings.anchorDisplayName)
 
-        if anchor.isFallback {
+        if !settings.followDock, anchor.isFallback {
             let ghostName = settings.anchorDisplayName ?? "Chosen display"
             let ghost = NSMenuItem(
                 title: "\(ghostName) (disconnected — using \(anchor.display.name))",
@@ -131,13 +145,19 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         }
 
         for display in screenManager.displays {
+            var title = display.name
+            if display.id == hostID {
+                title += " — Dock is here"
+            }
             let displayItem = NSMenuItem(
-                title: display.name,
+                title: title,
                 action: #selector(selectDisplay(_:)),
                 keyEquivalent: "")
             displayItem.target = self
             displayItem.representedObject = display
-            displayItem.state = display.id == anchor.display.id && !anchor.isFallback ? .on : .off
+            displayItem.state =
+                !settings.followDock && display.id == anchor.display.id && !anchor.isFallback
+                ? .on : .off
             submenu.addItem(displayItem)
         }
         item.submenu = submenu
@@ -175,8 +195,14 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         authorizer.openSystemSettings()
     }
 
+    @objc private func selectFollowDock() {
+        settings.followDock = true
+        onSettingsChanged()
+    }
+
     @objc private func selectDisplay(_ sender: NSMenuItem) {
         guard let display = sender.representedObject as? DisplayInfo else { return }
+        settings.followDock = false
         settings.anchorDisplayUUID = display.uuid
         settings.anchorDisplayName = display.name
         onSettingsChanged()
