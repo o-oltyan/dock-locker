@@ -1,8 +1,9 @@
 import CoreGraphics
 
 /// A strip along the bottom edge of a non-anchor display. While the cursor is
-/// inside `rect`, DockLocker rewrites its y to `clampedY`, denying macOS the
-/// sustained bottom-edge contact that triggers Dock migration.
+/// inside `rect`, DockLocker denies macOS the sustained bottom-edge contact
+/// that triggers Dock migration: mouseMoved events are swallowed, drag events
+/// get their y rewritten to `clampedY`.
 public struct ClampZone: Equatable, Sendable {
     /// Hit-test rect in CG global space (top-left origin).
     public let rect: CGRect

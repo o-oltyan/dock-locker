@@ -5,10 +5,10 @@ A tiny macOS menu-bar utility that keeps the Dock on the display you choose.
 On multi-monitor Macs, the Dock jumps to whichever display the cursor lingers
 against at the bottom edge. DockLocker prevents that: a CGEvent tap watches
 mouse movement and, when the cursor touches the bottom ~3 px of any display
-*other* than your chosen one, nudges it up 5 px — so macOS never gets the
-sustained edge contact that triggers Dock migration. Hold the bypass key
-(default: **Fn/Globe**) and the Dock behaves normally, so you can still move it
-deliberately.
+*other* than your chosen one, filters the events (moves are swallowed, drags
+are clamped 5 px up) — so macOS never gets the sustained edge contact that
+triggers Dock migration. Hold the bypass key (default: **Fn/Globe**) and the
+Dock behaves normally, so you can still move it deliberately.
 
 - Menu-bar only — no Dock icon, runs in the background (`LSUIElement`)
 - Pick the anchor display and the bypass key from the menu

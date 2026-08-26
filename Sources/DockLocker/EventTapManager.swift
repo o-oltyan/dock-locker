@@ -89,6 +89,11 @@ final class EventTapManager {
                 return Unmanaged.passUnretained(event)
             }
             if let clamped = ClampZone.clampedLocation(for: event.location, in: zones) {
+                // mouseMoved: swallow the event entirely — the Dock never
+                // learns the cursor reached the edge (DockAnchor-proven at
+                // this tap location). Drags: clamp the location instead so
+                // an in-flight drag keeps tracking (docklock-proven).
+                if type == .mouseMoved { return nil }
                 event.location = clamped
             }
             return Unmanaged.passUnretained(event)
