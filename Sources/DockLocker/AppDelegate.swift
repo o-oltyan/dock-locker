@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let authorizer = AccessibilityAuthorizer()
     private let dockDetector = DockLocationDetector()
     private var menuController: StatusMenuController?
+    private var settingsWindow: SettingsWindowController?
     private var tapCreationFailed = false
     /// Last display seen hosting the Dock (follow mode); kept when detection
     /// transiently returns nil so the anchor never flaps.
@@ -28,7 +29,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return tapCreationFailed ? .stale : .trusted
     }
 
+    /// True when launchd started us as a login item — the launch Apple event
+    /// carries 'lgit' in its property data. Manual launches (Finder,
+    /// Spotlight, `open`) don't.
+    private var launchedAsLoginItem: Bool {
+        let event = NSAppleEventManager.shared().currentAppleEvent
+        return event?.eventID == kAEOpenApplication
+            && event?.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue
+                == keyAELaunchedAsLogInItem
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+        settingsWindow = SettingsWindowController(
+            settings: settings,
+            screenManager: screenManager,
+            loginItems: loginItems,
+            authorizer: authorizer,
+            permissionState: { [unowned self] in self.permissionState },
+            onSettingsChanged: { [unowned self] in
+                self.refreshFollowAnchor()
+                self.apply()
+            })
         menuController = StatusMenuController(
             settings: settings,
             screenManager: screenManager,
@@ -42,7 +63,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onSettingsChanged: { [unowned self] in
                 self.refreshFollowAnchor()
                 self.apply()
-            })
+            },
+            openSettings: { [unowned self] in self.settingsWindow?.show() })
         screenManager.onChange = { [unowned self] in
             self.refreshFollowAnchor()
             self.apply()
@@ -61,6 +83,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         authorizer.requestIfNeeded()
         refreshFollowAnchor()
         apply()
+        if !launchedAsLoginItem {
+            settingsWindow?.show()
+        }
+    }
+
+    /// Fires when the running app is opened again (Finder, Spotlight, `open`).
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        settingsWindow?.show()
+        return false
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -93,6 +124,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Recomputes zones from current settings + displays and drives the tap.
     private func apply() {
+        menuController?.setIconVisible(settings.showMenuBarIcon)
         tapManager.zones = ClampZone.zones(
             displays: screenManager.displays,
             anchorID: currentAnchorID())

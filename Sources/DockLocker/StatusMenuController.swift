@@ -15,6 +15,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     private let permissionState: () -> PermissionState
     private let dockHostDisplayID: () -> UInt32?
     private let onSettingsChanged: () -> Void
+    private let openSettings: () -> Void
 
     init(
         settings: SettingsStore,
@@ -23,7 +24,8 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         authorizer: AccessibilityAuthorizer,
         permissionState: @escaping () -> PermissionState,
         dockHostDisplayID: @escaping () -> UInt32?,
-        onSettingsChanged: @escaping () -> Void
+        onSettingsChanged: @escaping () -> Void,
+        openSettings: @escaping () -> Void
     ) {
         self.settings = settings
         self.screenManager = screenManager
@@ -32,6 +34,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         self.permissionState = permissionState
         self.dockHostDisplayID = dockHostDisplayID
         self.onSettingsChanged = onSettingsChanged
+        self.openSettings = openSettings
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
         statusItem.button?.image = NSImage(
@@ -44,6 +47,10 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         rebuild()
+    }
+
+    func setIconVisible(_ visible: Bool) {
+        statusItem.isVisible = visible
     }
 
     private func rebuild() {
@@ -106,6 +113,18 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
+        let settingsItem = NSMenuItem(
+            title: "Settings…",
+            action: #selector(showSettings),
+            keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+        let about = NSMenuItem(
+            title: "About DockLocker",
+            action: #selector(showAbout),
+            keyEquivalent: "")
+        about.target = self
+        menu.addItem(about)
         let quit = NSMenuItem(
             title: "Quit DockLocker",
             action: #selector(NSApplication.terminate(_:)),
@@ -229,5 +248,13 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
 
     @objc private func openLoginItemSettings() {
         loginItems.openSystemSettings()
+    }
+
+    @objc private func showSettings() {
+        openSettings()
+    }
+
+    @objc private func showAbout() {
+        AboutPanel.show()
     }
 }

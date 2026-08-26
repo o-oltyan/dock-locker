@@ -8,6 +8,7 @@ public final class SettingsStore {
         static let anchorDisplayName = "anchorDisplayName"
         static let bypassModifier = "bypassModifier"
         static let followDock = "followDock"
+        static let showMenuBarIcon = "showMenuBarIcon"
     }
 
     private let defaults: UserDefaults
@@ -37,6 +38,13 @@ public final class SettingsStore {
     public var followDock: Bool {
         get { defaults.object(forKey: Key.followDock) as? Bool ?? true }
         set { defaults.set(newValue, forKey: Key.followDock) }
+    }
+
+    /// The settings window remains reachable when hidden: opening the app
+    /// again from Finder/Spotlight shows it.
+    public var showMenuBarIcon: Bool {
+        get { defaults.object(forKey: Key.showMenuBarIcon) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: Key.showMenuBarIcon) }
     }
 
     public var bypassModifier: ModifierKey {

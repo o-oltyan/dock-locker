@@ -18,6 +18,13 @@ import Testing
         #expect(store.anchorDisplayName == nil)
         #expect(store.bypassModifier == .fn)
         #expect(store.followDock == true)
+        #expect(store.showMenuBarIcon == true)
+    }
+
+    @Test func showMenuBarIconPersists() {
+        let store = freshStore()
+        store.showMenuBarIcon = false
+        #expect(store.showMenuBarIcon == false)
     }
 
     @Test func followDockPersists() {
