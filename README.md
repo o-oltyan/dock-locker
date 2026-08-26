@@ -17,13 +17,30 @@ Dock behaves normally, so you can still move it deliberately.
   unplug/replug; if the chosen display is missing, DockLocker falls back to the
   main display and says so in the menu
 
-## Build & install
+## Install (from Releases)
+
+1. Download `DockLocker-vX.Y.Z.zip` from the
+   [Releases page](https://github.com/o-oltyan/dock-locker/releases), unzip,
+   and move `DockLocker.app` to `/Applications` (or `~/Applications`).
+2. First launch: macOS will block the app because it isn't notarized (there's
+   no paid Apple Developer ID behind it). Open **System Settings → Privacy &
+   Security**, scroll down, and click **Open Anyway**. Alternatively, from a
+   terminal: `xattr -cr /Applications/DockLocker.app` and launch normally.
+3. Grant the **Accessibility** permission when prompted — DockLocker needs it
+   to filter mouse events. It picks the grant up automatically within seconds.
+4. Click the menu-bar icon → **Lock Dock to** → pick your display.
+
+The universal (Apple silicon + Intel) build is produced by CI from a tag; see
+`.github/workflows/release.yml`.
+
+## Build from source
 
 ```sh
 make test      # unit tests (clamp-zone math, coordinate conversion, settings)
-make app       # assemble build/DockLocker.app (ad-hoc signed)
+make app       # assemble build/DockLocker.app (universal, ad-hoc signed)
 make run       # build + launch from build/
 make install   # copy to ~/Applications and launch
+make zip       # build/DockLocker.zip, the release artifact
 ```
 
 Requires Xcode command line tools (Swift 6+). No third-party dependencies.
