@@ -32,6 +32,7 @@ final class SettingsWindowController {
     }
 
     func show() {
+        WindowedMode.enter()
         NSApp.activate(ignoringOtherApps: true)
         if window == nil {
             let window = NSWindow(
@@ -99,8 +100,42 @@ final class SettingsWindowController {
     }
 }
 
+/// Shows the app in the Dock while any titled window is open, and hides it
+/// again when the last one closes — the standard pattern for menu-bar apps
+/// with occasional windows.
+@MainActor
+enum WindowedMode {
+    private static var observer: NSObjectProtocol?
+
+    static func enter() {
+        NSApp.setActivationPolicy(.regular)
+        if observer == nil {
+            observer = NotificationCenter.default.addObserver(
+                forName: NSWindow.willCloseNotification, object: nil, queue: .main
+            ) { notification in
+                let closing = notification.object as? NSWindow
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated { exitIfNoWindowsLeft(excluding: closing) }
+                }
+            }
+        }
+    }
+
+    private static func exitIfNoWindowsLeft(excluding closing: NSWindow?) {
+        // The status item's borderless NSStatusBarWindow is always "visible";
+        // only titled windows count as real UI.
+        let stillOpen = NSApp.windows.contains {
+            $0 !== closing && $0.isVisible && $0.styleMask.contains(.titled)
+        }
+        if !stillOpen {
+            NSApp.setActivationPolicy(.accessory)
+        }
+    }
+}
+
 enum AboutPanel {
     @MainActor static func show() {
+        WindowedMode.enter()
         NSApp.activate(ignoringOtherApps: true)
         NSApp.orderFrontStandardAboutPanel(options: [
             .credits: NSAttributedString(
