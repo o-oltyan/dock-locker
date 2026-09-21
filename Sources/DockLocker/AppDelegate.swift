@@ -1,14 +1,6 @@
 import AppKit
 import DockLockerCore
 
-enum PermissionState {
-    case trusted
-    case untrusted
-    /// TCC reports trusted but tap creation failed — typical after an ad-hoc
-    /// rebuild left a stale Accessibility grant behind.
-    case stale
-}
-
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings = SettingsStore()
@@ -20,13 +12,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuController: StatusMenuController?
     private var settingsWindow: SettingsWindowController?
     private var tapCreationFailed = false
+    private var lastPermissionState: PermissionState?
     /// Last display seen hosting the Dock (follow mode); kept when detection
     /// transiently returns nil so the anchor never flaps.
     private var lastDockDisplayID: UInt32?
 
     var permissionState: PermissionState {
-        if !authorizer.isTrusted { return .untrusted }
-        return tapCreationFailed ? .stale : .trusted
+        PermissionState.resolve(
+            axTrusted: authorizer.isTrusted,
+            tapFailed: tapCreationFailed,
+            wasGrantedBefore: settings.accessibilityWasGranted)
     }
 
     /// True when launchd started us as a login item — the launch Apple event
@@ -46,6 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             loginItems: loginItems,
             authorizer: authorizer,
             permissionState: { [unowned self] in self.permissionState },
+            resetAccessibility: { [unowned self] in self.resetAccessibility() },
             onSettingsChanged: { [unowned self] in
                 self.refreshFollowAnchor()
                 self.apply()
@@ -56,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             loginItems: loginItems,
             authorizer: authorizer,
             permissionState: { [unowned self] in self.permissionState },
+            resetAccessibility: { [unowned self] in self.resetAccessibility() },
             dockHostDisplayID: { [unowned self] in
                 self.refreshFollowAnchor()
                 return self.lastDockDisplayID
@@ -69,7 +66,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.refreshFollowAnchor()
             self.apply()
         }
-        authorizer.onTrusted = { [unowned self] in self.apply() }
+        authorizer.onPoll = { [unowned self] in self.permissionPolled() }
         // A deliberate Fn-move finishes shortly after the key is released;
         // the Dock's migration animation can lag, so check a few times.
         tapManager.onBypassReleased = { [unowned self] in
@@ -80,9 +77,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
-        authorizer.requestIfNeeded()
+        authorizer.startMonitoring()
         refreshFollowAnchor()
         apply()
+        lastPermissionState = permissionState
+        // A stale grant needs a reset, not another prompt — the UI offers it.
+        if lastPermissionState == .untrusted {
+            authorizer.requestIfNeeded()
+        }
         if !launchedAsLoginItem {
             settingsWindow?.show()
         }
@@ -122,6 +124,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ).display.id
     }
 
+    /// Re-applies while the tap is failing (so it recovers by itself once the
+    /// grant is valid) and whenever the permission state flips either way.
+    private func permissionPolled() {
+        if tapCreationFailed { apply() }
+        let state = permissionState
+        guard state != lastPermissionState else { return }
+        lastPermissionState = state
+        apply()
+        settingsWindow?.refresh()
+    }
+
+    private func resetAccessibility() {
+        authorizer.resetAndRequest { [weak self] in
+            self?.settings.accessibilityWasGranted = false
+            self?.tapCreationFailed = false
+        }
+    }
+
     /// Recomputes zones from current settings + displays and drives the tap.
     private func apply() {
         menuController?.setIconVisible(settings.showMenuBarIcon)
@@ -130,7 +150,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             anchorID: currentAnchorID())
         tapManager.bypassFlags = settings.bypassModifier.flags
 
-        if settings.enabled, authorizer.isTrusted {
+        guard authorizer.isTrusted else {
+            // Tear the tap down: a modifying tap that lost its permission
+            // must not stay in the event stream.
+            tapManager.stop()
+            return
+        }
+        if settings.enabled {
             if !tapManager.isRunning {
                 tapCreationFailed = !tapManager.start()
             } else {
@@ -139,5 +165,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             tapManager.setEnabled(false)
         }
+        if !tapCreationFailed { settings.accessibilityWasGranted = true }
     }
 }

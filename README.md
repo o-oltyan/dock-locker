@@ -45,7 +45,7 @@ The universal (Apple silicon + Intel) build is produced by CI from a tag; see
 
 ```sh
 make test      # unit tests (clamp-zone math, coordinate conversion, settings)
-make app       # assemble build/DockLocker.app (universal, ad-hoc signed)
+make app       # assemble build/DockLocker.app (universal; see signing below)
 make run       # build + launch from build/
 make install   # copy to ~/Applications and launch
 make zip       # build/DockLocker.zip, the release artifact
@@ -60,22 +60,35 @@ Modifying mouse events requires the **Accessibility** permission
 first launch and picks the permission up automatically once granted — no
 relaunch needed.
 
-**Rebuild caveat:** the default build is *ad-hoc signed*, and macOS ties the
-Accessibility grant to the exact signature. After rebuilding you may see the
-toggle still enabled in System Settings while the app silently can't create
-its event tap (the menu will say "Permission stale"). Fix:
+DockLocker keeps checking the permission while it runs, so granting or
+revoking it is picked up within a couple of seconds.
+
+**Updates and the grant:** macOS ties the grant to the app's code signature.
+Builds signed with the project's self-signed certificate share one signature
+requirement, so the grant survives updates. An *ad-hoc* build (no certificate)
+gets a new identity every time: after updating, the toggle in System Settings
+still looks enabled but macOS no longer honours it. DockLocker detects this
+and offers **Reset & Re-grant…** (settings window) / **Reset Accessibility
+Permission…** (menu), which clears the old entry and asks again — the same as:
 
 ```sh
-make reset-tcc     # clears the stale grant; re-grant on next launch
+make reset-tcc
 ```
 
-To make the grant survive rebuilds, create a self-signed code-signing
-certificate in Keychain Access (Certificate Assistant → Create a Certificate →
-type "Code Signing", e.g. named `DockLocker Dev`) and build with:
+Moving from an ad-hoc build to a certificate-signed one needs that reset one
+last time.
+
+To sign your own builds, create the certificate once — `make` then picks it up
+automatically:
 
 ```sh
-make install CODESIGN_IDENTITY="DockLocker Dev"
+scripts/make-signing-cert.sh            # adds "DockLocker Self-Signed" to your login keychain
+make install
 ```
+
+For release builds, run `scripts/make-signing-cert.sh --export` and store the
+output as the `SIGNING_CERT_P12` repository secret, with the password as
+`SIGNING_CERT_PASSWORD`.
 
 ## The Fn key on third-party keyboards
 

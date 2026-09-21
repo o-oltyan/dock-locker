@@ -27,6 +27,13 @@ import Testing
         #expect(store.showMenuBarIcon == false)
     }
 
+    @Test func accessibilityWasGrantedDefaultsFalseAndPersists() {
+        let store = freshStore()
+        #expect(store.accessibilityWasGranted == false)
+        store.accessibilityWasGranted = true
+        #expect(store.accessibilityWasGranted == true)
+    }
+
     @Test func followDockPersists() {
         let store = freshStore()
         store.followDock = false

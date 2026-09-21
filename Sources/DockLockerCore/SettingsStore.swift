@@ -9,6 +9,7 @@ public final class SettingsStore {
         static let bypassModifier = "bypassModifier"
         static let followDock = "followDock"
         static let showMenuBarIcon = "showMenuBarIcon"
+        static let accessibilityWasGranted = "accessibilityWasGranted"
     }
 
     private let defaults: UserDefaults
@@ -45,6 +46,13 @@ public final class SettingsStore {
     public var showMenuBarIcon: Bool {
         get { defaults.object(forKey: Key.showMenuBarIcon) as? Bool ?? true }
         set { defaults.set(newValue, forKey: Key.showMenuBarIcon) }
+    }
+
+    /// Set once the event tap has worked; lets a later "not trusted" be told
+    /// apart from "never granted" (see PermissionState.stale).
+    public var accessibilityWasGranted: Bool {
+        get { defaults.bool(forKey: Key.accessibilityWasGranted) }
+        set { defaults.set(newValue, forKey: Key.accessibilityWasGranted) }
     }
 
     public var bypassModifier: ModifierKey {
