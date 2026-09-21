@@ -3,9 +3,11 @@ BUNDLE_ID = com.octa.DockLocker
 BUILD_DIR = build
 APP = $(BUILD_DIR)/$(APP_NAME).app
 BIN = .build/apple/Products/Release/$(APP_NAME)
-# Override with a stable self-signed identity to keep the Accessibility grant
-# across rebuilds, e.g. `make app CODESIGN_IDENTITY="DockLocker Dev"`.
-CODESIGN_IDENTITY ?= -
+# Signs with the self-signed certificate from scripts/make-signing-cert.sh when
+# it's in the keychain, so the Accessibility grant survives rebuilds/updates;
+# falls back to ad-hoc (grant breaks on every build) otherwise.
+SIGNING_CERT = DockLocker Self-Signed
+CODESIGN_IDENTITY ?= $(shell security find-certificate -c "$(SIGNING_CERT)" >/dev/null 2>&1 && echo "$(SIGNING_CERT)" || echo -)
 
 .PHONY: test build app run install zip reset-tcc clean
 
@@ -24,6 +26,7 @@ app: build
 	plutil -lint $(APP)/Contents/Info.plist
 	codesign --force --sign "$(CODESIGN_IDENTITY)" --identifier $(BUNDLE_ID) $(APP)
 	codesign --verify $(APP)
+	@codesign -d -r- $(APP) 2>&1 | grep designated
 
 run: app
 	open $(APP)
@@ -38,8 +41,8 @@ install: app
 zip: app
 	ditto -c -k --keepParent $(APP) $(BUILD_DIR)/$(APP_NAME).zip
 
-# Ad-hoc signatures change every build, which can leave a stale Accessibility
-# grant (toggle looks on, tap creation fails). This clears it.
+# Clears a stale Accessibility grant (toggle looks on, app isn't trusted) —
+# what the app's own "Reset & Re-grant…" button runs.
 reset-tcc:
 	tccutil reset Accessibility $(BUNDLE_ID)
 

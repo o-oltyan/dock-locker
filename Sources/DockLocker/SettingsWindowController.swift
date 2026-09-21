@@ -13,6 +13,7 @@ final class SettingsWindowController {
     private let loginItems: LoginItemManager
     private let authorizer: AccessibilityAuthorizer
     private let permissionState: () -> PermissionState
+    private let resetAccessibility: () -> Void
     private let onSettingsChanged: () -> Void
 
     init(
@@ -21,6 +22,7 @@ final class SettingsWindowController {
         loginItems: LoginItemManager,
         authorizer: AccessibilityAuthorizer,
         permissionState: @escaping () -> PermissionState,
+        resetAccessibility: @escaping () -> Void,
         onSettingsChanged: @escaping () -> Void
     ) {
         self.settings = settings
@@ -28,6 +30,7 @@ final class SettingsWindowController {
         self.loginItems = loginItems
         self.authorizer = authorizer
         self.permissionState = permissionState
+        self.resetAccessibility = resetAccessibility
         self.onSettingsChanged = onSettingsChanged
     }
 
@@ -48,6 +51,12 @@ final class SettingsWindowController {
         window?.contentViewController = NSHostingController(rootView: makeView())
         window?.center()
         window?.makeKeyAndOrderFront(nil)
+    }
+
+    /// Rebuilds the open window so the permission banner tracks reality.
+    func refresh() {
+        guard let window, window.isVisible else { return }
+        window.contentViewController = NSHostingController(rootView: makeView())
     }
 
     private func makeView() -> SettingsView {
@@ -72,6 +81,7 @@ final class SettingsWindowController {
                     self?.authorizer.requestIfNeeded()
                     self?.authorizer.openSystemSettings()
                 },
+                resetAccess: { [weak self] in self?.resetAccessibility() },
                 setLockSelection: { [weak self] selection in
                     guard let self else { return }
                     if selection == "follow" {
@@ -152,6 +162,7 @@ struct SettingsView: View {
     struct Actions {
         let setEnabled: (Bool) -> Void
         let grantAccess: () -> Void
+        let resetAccess: () -> Void
         let setLockSelection: (String) -> Void
         let setModifier: (ModifierKey) -> Void
         let toggleLogin: () -> Void
@@ -175,12 +186,17 @@ struct SettingsView: View {
                     HStack {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.yellow)
-                        Text(
-                            permission == .untrusted
-                                ? "DockLocker needs the Accessibility permission to work."
-                                : "Accessibility grant is stale — remove and re-add DockLocker.")
-                        Spacer()
-                        Button("Grant Access…") { actions.grantAccess() }
+                        if permission == .untrusted {
+                            Text("DockLocker needs the Accessibility permission to work.")
+                            Spacer()
+                            Button("Grant Access…") { actions.grantAccess() }
+                        } else {
+                            Text(
+                                "macOS no longer accepts DockLocker's Accessibility grant "
+                                    + "(this happens after an update), even if it looks enabled.")
+                            Spacer()
+                            Button("Reset & Re-grant…") { actions.resetAccess() }
+                        }
                     }
                 }
             }

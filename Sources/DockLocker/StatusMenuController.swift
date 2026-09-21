@@ -13,6 +13,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     private let loginItems: LoginItemManager
     private let authorizer: AccessibilityAuthorizer
     private let permissionState: () -> PermissionState
+    private let resetAccessibility: () -> Void
     private let dockHostDisplayID: () -> UInt32?
     private let onSettingsChanged: () -> Void
     private let openSettings: () -> Void
@@ -23,6 +24,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         loginItems: LoginItemManager,
         authorizer: AccessibilityAuthorizer,
         permissionState: @escaping () -> PermissionState,
+        resetAccessibility: @escaping () -> Void,
         dockHostDisplayID: @escaping () -> UInt32?,
         onSettingsChanged: @escaping () -> Void,
         openSettings: @escaping () -> Void
@@ -32,6 +34,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         self.loginItems = loginItems
         self.authorizer = authorizer
         self.permissionState = permissionState
+        self.resetAccessibility = resetAccessibility
         self.dockHostDisplayID = dockHostDisplayID
         self.onSettingsChanged = onSettingsChanged
         self.openSettings = openSettings
@@ -76,17 +79,17 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
             menu.addItem(grant)
         case .stale:
             let stale = NSMenuItem(
-                title: "Permission stale — reset Accessibility for DockLocker",
+                title: "Accessibility grant no longer valid for this version",
                 action: nil,
                 keyEquivalent: "")
             stale.isEnabled = false
             menu.addItem(stale)
-            let open = NSMenuItem(
-                title: "Open Accessibility Settings…",
-                action: #selector(grantAccessibility),
+            let reset = NSMenuItem(
+                title: "Reset Accessibility Permission…",
+                action: #selector(resetAccessibilityPermission),
                 keyEquivalent: "")
-            open.target = self
-            menu.addItem(open)
+            reset.target = self
+            menu.addItem(reset)
         case .trusted:
             break
         }
@@ -212,6 +215,10 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     @objc private func grantAccessibility() {
         authorizer.requestIfNeeded()
         authorizer.openSystemSettings()
+    }
+
+    @objc private func resetAccessibilityPermission() {
+        resetAccessibility()
     }
 
     @objc private func selectFollowDock() {
