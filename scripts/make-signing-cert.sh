@@ -23,8 +23,12 @@ fi
 
 PASSWORD="${P12_PASSWORD:-}"
 if [ -z "$PASSWORD" ]; then
+    # Echo goes off before the prompt appears, and comes back on Ctrl-C too.
+    trap 'stty echo' INT TERM
+    stty -echo
     printf "Password for the exported .p12: " >&2
-    stty -echo; read -r PASSWORD; stty echo; echo >&2
+    read -r PASSWORD
+    stty echo; trap - INT TERM; echo >&2
 fi
 
 WORK=$(mktemp -d)
@@ -50,7 +54,8 @@ EOF
 /usr/bin/openssl pkcs12 -export -name "$NAME" -inkey "$WORK/key.pem" -in "$WORK/cert.pem" \
     -out "$WORK/cert.p12" -passout "pass:$PASSWORD"
 
-security import "$WORK/cert.p12" -k "$KEYCHAIN" -P "$PASSWORD" -T /usr/bin/codesign
+# stdout is reserved for the --export payload.
+security import "$WORK/cert.p12" -k "$KEYCHAIN" -P "$PASSWORD" -T /usr/bin/codesign >&2
 echo "Imported '$NAME'. The first 'make app' may ask for keychain access — choose Always Allow." >&2
 
 if [ "$EXPORT" = 1 ]; then
