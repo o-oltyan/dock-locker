@@ -11,7 +11,6 @@ final class SettingsWindowController {
     private let settings: SettingsStore
     private let screenManager: ScreenManager
     private let loginItems: LoginItemManager
-    private let authorizer: AccessibilityAuthorizer
     private let permissionState: () -> PermissionState
     private let resetAccessibility: () -> Void
     private let onSettingsChanged: () -> Void
@@ -20,7 +19,6 @@ final class SettingsWindowController {
         settings: SettingsStore,
         screenManager: ScreenManager,
         loginItems: LoginItemManager,
-        authorizer: AccessibilityAuthorizer,
         permissionState: @escaping () -> PermissionState,
         resetAccessibility: @escaping () -> Void,
         onSettingsChanged: @escaping () -> Void
@@ -28,7 +26,6 @@ final class SettingsWindowController {
         self.settings = settings
         self.screenManager = screenManager
         self.loginItems = loginItems
-        self.authorizer = authorizer
         self.permissionState = permissionState
         self.resetAccessibility = resetAccessibility
         self.onSettingsChanged = onSettingsChanged
@@ -77,10 +74,9 @@ final class SettingsWindowController {
                     self?.settings.enabled = $0
                     self?.onSettingsChanged()
                 },
-                grantAccess: { [weak self] in
-                    self?.authorizer.requestIfNeeded()
-                    self?.authorizer.openSystemSettings()
-                },
+                // Resets too: an entry left by a pre-1.3 ad-hoc build looks
+                // enabled but can't be told apart from "never granted".
+                grantAccess: { [weak self] in self?.resetAccessibility() },
                 resetAccess: { [weak self] in self?.resetAccessibility() },
                 setLockSelection: { [weak self] selection in
                     guard let self else { return }

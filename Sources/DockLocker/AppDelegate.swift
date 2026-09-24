@@ -39,7 +39,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             settings: settings,
             screenManager: screenManager,
             loginItems: loginItems,
-            authorizer: authorizer,
             permissionState: { [unowned self] in self.permissionState },
             resetAccessibility: { [unowned self] in self.resetAccessibility() },
             onSettingsChanged: { [unowned self] in
@@ -50,7 +49,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             settings: settings,
             screenManager: screenManager,
             loginItems: loginItems,
-            authorizer: authorizer,
             permissionState: { [unowned self] in self.permissionState },
             resetAccessibility: { [unowned self] in self.resetAccessibility() },
             dockHostDisplayID: { [unowned self] in
