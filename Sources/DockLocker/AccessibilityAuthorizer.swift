@@ -39,8 +39,9 @@ final class AccessibilityAuthorizer {
         AXIsProcessTrustedWithOptions(options)
     }
 
-    /// Drops the existing (stale) grant so macOS will accept a fresh one for
-    /// this build, then asks again. Same effect as `make reset-tcc`.
+    /// Drops any existing entry (it may be stale, pinned to an older build's
+    /// signature) so macOS will accept a fresh one for this build, then asks
+    /// again. A no-op reset when there's no entry. Same as `make reset-tcc`.
     func resetAndRequest(completion: @escaping @MainActor () -> Void) {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")

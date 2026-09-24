@@ -67,16 +67,18 @@ revoking it is picked up within a couple of seconds.
 Builds signed with the project's self-signed certificate share one signature
 requirement, so the grant survives updates. An *ad-hoc* build (no certificate)
 gets a new identity every time: after updating, the toggle in System Settings
-still looks enabled but macOS no longer honours it. DockLocker detects this
-and offers **Reset & Re-grant…** (settings window) / **Reset Accessibility
-Permission…** (menu), which clears the old entry and asks again — the same as:
+still looks enabled but macOS no longer honours it. Turning the toggle off and
+on again doesn't help, because macOS keeps the old signature requirement.
+**Grant Access…** and **Reset & Re-grant…** (settings window) and their menu
+counterparts clear the old entry before asking again, the same as:
 
 ```sh
 make reset-tcc
 ```
 
-Moving from an ad-hoc build to a certificate-signed one needs that reset one
-last time.
+Moving from an ad-hoc build (1.2.1 and earlier) to a certificate-signed one
+needs that reset one last time. DockLocker can't tell that case apart from a
+first install, so it shows **Grant Access…**, which handles both.
 
 To sign your own builds, create the certificate once — `make` then picks it up
 automatically:

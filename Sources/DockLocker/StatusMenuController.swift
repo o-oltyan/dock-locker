@@ -11,7 +11,6 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     private let settings: SettingsStore
     private let screenManager: ScreenManager
     private let loginItems: LoginItemManager
-    private let authorizer: AccessibilityAuthorizer
     private let permissionState: () -> PermissionState
     private let resetAccessibility: () -> Void
     private let dockHostDisplayID: () -> UInt32?
@@ -22,7 +21,6 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         settings: SettingsStore,
         screenManager: ScreenManager,
         loginItems: LoginItemManager,
-        authorizer: AccessibilityAuthorizer,
         permissionState: @escaping () -> PermissionState,
         resetAccessibility: @escaping () -> Void,
         dockHostDisplayID: @escaping () -> UInt32?,
@@ -32,7 +30,6 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         self.settings = settings
         self.screenManager = screenManager
         self.loginItems = loginItems
-        self.authorizer = authorizer
         self.permissionState = permissionState
         self.resetAccessibility = resetAccessibility
         self.dockHostDisplayID = dockHostDisplayID
@@ -212,9 +209,10 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         onSettingsChanged()
     }
 
+    /// Resets first, like the settings window: a pre-1.3 ad-hoc grant looks
+    /// enabled but can't be detected as stale.
     @objc private func grantAccessibility() {
-        authorizer.requestIfNeeded()
-        authorizer.openSystemSettings()
+        resetAccessibility()
     }
 
     @objc private func resetAccessibilityPermission() {
